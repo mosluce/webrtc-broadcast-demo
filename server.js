@@ -40,6 +40,7 @@ io.on('connection', (socket) => {
         var bc = bcs[data.channel];
 
         socket.channel = data.channel;
+        socket.isWatcher = true;
 
         if (bc) {
             socket.join(bc.room);
@@ -70,6 +71,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
+        if(socket.isWatcher) return;
+
         var bc = bcs[socket.channel];
 
         if (bc) {
