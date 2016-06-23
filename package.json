@@ -1,0 +1,22 @@
+{
+  "name": "rtc-hello-world",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "engines": {
+    "node": "6.2.1"
+  },
+  "dependencies": {
+    "express": "^4.14.0",
+    "socket.io": "^1.4.6",
+    "socket.io-redis": "^1.0.0",
+    "uuid": "^2.0.2"
+  }
+}

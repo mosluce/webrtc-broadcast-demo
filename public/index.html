@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Material Design fonts -->
+    <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700">
+    <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/icon?family=Material+Icons">
+
+    <link rel="stylesheet" href="/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/bootstrap-material-design/dist/css/bootstrap-material-design.min.css">
+    <link rel="stylesheet" href="/bootstrap-material-design/dist/css/ripples.min.css">
+
+    <link rel="stylesheet" href="/style.css">
+
+    <title>WebRTC DEMO 01</title>
+</head>
+<body>
+
+<div class="container">
+    <div class="row">
+        <div class="col-sm-12 well">
+            <div class="form-group label-floating">
+                <label for="channel-name-field" class="control-label">Channel</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="channel-name-field">
+                    <span class="input-group-btn">
+                        <button class="btn btn-primary" id="broadcast-button">Broadcast</button>
+                    </span>
+                    <span class="input-group-btn">
+                        <button class="btn btn-primary" id="watch-button">Watch</button>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <video autoplay id="video"></video>
+    </div>
+</div>
+
+<script src="/jquery/dist/jquery.min.js"></script>
+<script src="/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="/bootstrap-material-design/dist/js/material.min.js"></script>
+<script src="/bootstrap-material-design/dist/js/ripples.min.js"></script>
+
+<script src="/webrtc-adapter/adapter.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<!-- Your application bootstrap  -->
+<script type="text/javascript">
+    var socket = io();
+    var constraints = {
+        video: true,
+        audio: true
+    };
+    var mystream, mypc, pcs = [];
+    //control
+    var broadcastButton, watchButton, channelNameField, video;
+
+    function didGetStreamFromUserMedia(stream) {
+        video[0].src = URL.createObjectURL(stream);
+        mystream = stream;
+        socket.emit('start broadcast', {channel: channelNameField.val()});
+    }
+
+    function logError(err) {
+        console.log(err);
+    }
+
+    function disableControls() {
+        channelNameField[0].disabled = true;
+        broadcastButton[0].disabled = true;
+        watchButton[0].disabled = true;
+    }
+
+    function resetControls() {
+        channelNameField[0].disabled = false;
+        broadcastButton[0].disabled = false;
+        watchButton[0].disabled = false;
+
+        channelNameField.val('');
+    }
+
+    function startBroadcast() {
+        disableControls();
+
+        video[0].muted = true;
+
+        navigator.getUserMedia(constraints, didGetStreamFromUserMedia, logError);
+    }
+
+    function startWatch() {
+        disableControls();
+
+        mypc = new RTCPeerConnection();
+        mypc.onaddstream = function (e) {
+            video[0].src = URL.createObjectURL(e.stream);
+        };
+        mypc.onicecandidate = function (e) {
+            console.log('client : onicecandidate');
+        };
+        mypc.onnegotiationneeded = function (e) {
+            console.log('client : onnegotiationneeded');
+        };
+
+        socket.emit('start watch', {channel: channelNameField.val()});
+    }
+
+    function didWatchFailure() {
+        alert('channel is not exists');
+        resetControls();
+    }
+
+    function didBroadcastFailure() {
+        alert('channel has be used');
+        resetControls();
+    }
+
+    function watch(data) {
+        var pc = new RTCPeerConnection();
+
+        pc.onicecandidate = function (e) {
+            console.log('server : onicecandidate, watcher > ', data.watcher);
+
+            socket.emit('ice', {
+                candidate: e.candidate,
+                watcher: data.watcher
+            });
+        };
+
+        pc.onnegotiationneeded = function (e) {
+            console.log('server : onnegotiationneeded, watcher > ', data.watcher);
+
+            pc.createOffer().then(function (desc) {
+                return pc.setLocalDescription(desc);
+            }).then(function () {
+                socket.emit('offer', {
+                    watcher: data.watcher,
+                    sdp: pc.localDescription
+                });
+            }).catch(logError)
+        };
+
+        pcs[data.watcher] = pc;
+
+        pc.addStream(mystream);
+    }
+
+    function offer(data) {
+        mypc.setRemoteDescription(new RTCSessionDescription(data.sdp)).then(function () {
+            return mypc.createAnswer();
+        }).then(function (desc) {
+            return mypc.setLocalDescription(desc);
+        }).then(function () {
+            socket.emit('answer', {
+                sdp: mypc.localDescription
+            });
+        }).catch(logError);
+    }
+
+    function answer(data) {
+        var pc = pcs[data.watcher];
+
+        pc.setRemoteDescription(new RTCSessionDescription(data.sdp)).catch(logError);
+    }
+
+    function ice(data) {
+        mypc.addIceCandidate(data.candidate);
+    }
+
+    socket.on('watch fail', didWatchFailure);
+    socket.on('broadcast fail', didBroadcastFailure);
+    socket.on('watch', watch);
+    socket.on('offer', offer);
+    socket.on('answer', answer);
+    socket.on('ice', ice);
+
+    $(document).ready(function () {
+        $.material.init();
+
+        broadcastButton = $('#broadcast-button');
+        watchButton = $('#watch-button');
+        channelNameField = $('#channel-name-field');
+        video = $('#video');
+
+        broadcastButton[0].disabled = true;
+        watchButton[0].disabled = true;
+
+        broadcastButton.click(startBroadcast);
+        watchButton.click(startWatch);
+
+        channelNameField.keypress(function () {
+            var disabled = !channelNameField.val();
+
+            broadcastButton[0].disabled = disabled;
+            watchButton[0].disabled = disabled;
+        });
+    });
+</script>
+</body>
+</html>
