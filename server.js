@@ -19,11 +19,6 @@ http.listen(process.env.PORT || 3000, () => {
     console.log('http is listening...')
 });
 
-io.adapter(redis(process.env.REDIS_URL || {
-        host: 'localhost',
-        port: 6379
-    }));
-
 io.on('connection', (socket) => {
     socket.on('start broadcast', (data) => {
         var bc = bcs[data.channel];
