@@ -47,7 +47,6 @@
 <script src="/webrtc-adapter/adapter.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 
-<!-- Your application bootstrap  -->
 <script type="text/javascript">
     var socket = io();
     var constraints = {
@@ -169,11 +168,17 @@
         mypc.addIceCandidate(data.candidate);
     }
 
+    //server response
     socket.on('watch fail', didWatchFailure);
+    //server response
     socket.on('broadcast fail', didBroadcastFailure);
+    //watcher to broadcaster
     socket.on('watch', watch);
+    //broadcaster to watcher
     socket.on('offer', offer);
+    //watcher to broadcaster
     socket.on('answer', answer);
+    //broadcaster to watcher
     socket.on('ice', ice);
 
     $(document).ready(function () {
