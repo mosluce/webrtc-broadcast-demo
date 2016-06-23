@@ -20,6 +20,7 @@ http.listen(process.env.PORT || 3000, () => {
 });
 
 io.on('connection', (socket) => {
+
     socket.on('start broadcast', (data) => {
         var bc = bcs[data.channel];
 
@@ -37,6 +38,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('start watch', (data) => {
+
         var bc = bcs[data.channel];
 
         socket.channel = data.channel;
@@ -58,6 +60,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('answer', function (data) {
+        console.log(data);
+
         var bc = bcs[socket.channel];
 
         socket.to(bc.bc).emit('answer', {
